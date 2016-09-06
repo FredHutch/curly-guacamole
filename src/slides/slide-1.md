@@ -1,5 +1,5 @@
 class: center, middle
 
-# Title
+# Clever Title
 
 ---
