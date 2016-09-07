@@ -2,6 +2,10 @@
  * For more information on using remark, please check out the wiki pages:
  * https://github.com/gnab/remark/wiki
  */
+remark.macros.scale = function (percentage) {
+  var url = this;
+  return '<img src="' + url + '" style="width: ' + percentage + '" />';
+};
 var slideShow = remark.create({
   // Set the slideshow display ratio
   // Default: '4:3'
