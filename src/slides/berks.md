@@ -1,7 +1,10 @@
 # The Berkshelf Way
 
-berks manages cookbook dependencies, allows sane use of 3rd party cookbooks in
-our ecosystem
+`berkshelf` manages cookbook dependencies, allows liberal use of 3rd party
+cookbooks without losing one's sanity
+
+  - Using community cookbooks quickly leads to dependency hell
+  - Declare dependencies and let `berks` sort out which versions are required
 
 ---
 
