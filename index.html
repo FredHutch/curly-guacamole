@@ -15,7 +15,7 @@
 # Chef Development Workflow 
 
 ---
-# Policy objects
+# Policy Objects
 
  - role + cookbooks + environment = policy
 
@@ -24,14 +24,14 @@
 Roles define:
 
   - attributes
-  - run list\*
+  - run list &#9733
 
 ## Environment
 
 Environments define:
 
   - attributes
-  - cookbook versions\*
+  - cookbook versions &#9733
 
 ---
 
@@ -39,14 +39,12 @@ Environments define:
 
   - Role defines the cookbook(s) to be used
   - Environment defines the version of a cookbook to use
+    - Versioning is important because different versions of a cookbook may have
+      different features and capabilities
+    - This is particularly critical when using 3rd party (i.e. community)
+      cookbooks as we don't control releases
 
-  > Versioning is important because different versions of a cookbook
-  > may have different features and capabilities
-
-  > This is particularly critical when using 3rd party (i.e. community)
-  > cookbooks as we don't control releases
-
-  > _N.B.:_ A node may have multiple roles!
+> _N.B.:_ A node may have multiple roles!
 
 ---
 # Cookbook Patterns
@@ -70,21 +68,95 @@ Environments define:
 ---
 # Role Cookbooks
 
+A role cookbook is named for the role object it supports.
+
+   - a role "server" will have a cookbook named "role" behind it
+   - the "role" cookbook contains all the necessary recipes to configure the
+     node
+   - the role object will set its run list to the default recipe of the role
+     cookbook
+
+Roles get stacked up:
+
+   - we have a "cit-base" role that configures a minimum of things that are
+     globally acceptable for any node on the network
+     - ntp
+     - dns
+   - then a "scicomp-base" role that configures the minimum for a node to be
+     managed by SciComp:
+     - sudoers
+     - ssh keys
+
 ---
-# Environment Cookbook Development
 
-## Environment Branches
+# Role Cookbooks
 
-  - Each branch has a corresponding environment on the server
-  - An environment cookbook `scicomp-env-compute` with branches `prod` and
-    `dev`, there would have these environment objects on the Chef server:
+The role object on the server:
 
-     - `scicomp-env-compute` (the `prod` branch doesn't get a suffix)
-     - `scicomp-env-compute-dev`
+```
+$ knife role show scicomp-base 
+chef_type:           role
+default_attributes:
+description:         Minimal configuration to participate on Hutch Network
+env_run_lists:
+json_class:          Chef::Role
+name:                scicomp-base
+override_attributes:
+run_list:            recipe[scicomp-base]
+```
+
+Note that the run list is more precisely indicated as:
+
+```
+run_list:            recipe[scicomp-base::default]
+```
 
 ---
 
-# Environment Cookbook Development
+# Role Cookbooks
+
+The recipe `scicomp-base/recipes/default.rb`:
+
+```
+# .
+# Cookbook Name:: scicomp-base
+# Recipe:: default
+# .
+
+...
+
+include_recipe 'nscd::default'
+include_recipe 'sudo::default'
+include_recipe 'krb5::default'
+include_recipe 'scicomp-base::keys'
+
+# Create privilege separation directory
+directory '/var/run/sshd' do
+  owner 'root'
+  group 'root'
+  mode '0755'
+  action :create
+end
+
+...
+```
+
+---
+
+# Role Cookbooks
+
+# Development
+
+  - Check out, branch, and hack away
+  - When tests succeed and the features are done:
+    - merge to prod
+    - version
+    - upload itself and dependencies to server
+    - upload to kwik-e-mart
+  
+
+---
+# Environment Cookbooks
 
   - The environment cookbook has only a `metadata.rb` file containing
     the role cookbooks that will operate inside this environment
@@ -105,7 +177,7 @@ Environments define:
 
 ---
 
-# Environment Cookbook Development
+# Environment Cookbooks
 
 `scicomp-env-database/metadata.rb`:
 
@@ -128,15 +200,57 @@ depends 'scicomp-role-apache', '= 4.0.1'
 depends 'scicomp-role-nginx', '= 2.2.3'
 ```
 
+---
 
+# Environment Cookbooks
 
+## Environment Branches
+
+  - Each branch has a corresponding environment on the server
+  - An environment cookbook `scicomp-env-web` with branches `prod` and
+    `dev`, there would have these environment objects on the Chef server:
+
+     - `scicomp-env-web` (the `prod` branch doesn't get a suffix)
+     - `scicomp-env-web-dev`
+
+  > The "-dev" environment has different version pins, presumable targetting
+  > newer versions of cookbooks with additional features
 
 ---
 
+# Environment Cookbooks
 
+The environment for most SciComp nodes:
+
+```
+$ knife environment show scicomp-env-compute
+chef_type:           environment
+cookbook_versions:
+  apt:                 = 4.0.1
+  apt-chef:            = 1.0.0
+
+  ...
+
+  java:                = 1.39.0
+  scicomp-base:        = 0.1.7
+  scicomp-env-compute: = 0.1.2
+  scicomp-roles:       = 1.2.8
+  selinux:             = 0.9.0
+  seven_zip:           = 2.0.1
+  sudo:                = 2.9.0
+  sysctl:              = 0.7.5
+  vim:                 = 2.0.1
+  windows:             = 1.44.1
+  yum:                 = 3.11.0
+  yum-epel:            = 0.7.0
+default_attributes:
+description:         Environment for Scientific Computing Compute Hosts
+json_class:          Chef::Environment
+name:                scicomp-env-compute
+```
 
 ---
-# The Berkshelf Way
+# Berkshelf Management
 
 `berkshelf` manages cookbook dependencies, allows liberal use of 3rd party
 cookbooks without losing one's sanity
@@ -146,7 +260,9 @@ cookbooks without losing one's sanity
 
 ---
 
-# Basic `Berksfile`:
+# Berkshelf Management
+
+## Basic `Berksfile`:
 
   - created by `chef generate cookbook`
 
@@ -158,24 +274,23 @@ metadata
   - indicates url of a server running the supermarket API
   - indicates that dependencies are located in the `metadata.rb` file
 
----
+```
+source 'https://knife.fhcrc.org'
+source 'https://supermarket.chef.io'
 
-# Berks-ing
+metadata
+```
 
-## Building the Lockfile
-
-  - `Berksfile.lock` is a file containing a graph indicating cookbooks and
-    versions required
-  - `berks install` and `berks update` create and manage the file
-
-## Updating the Chef Server
-
-  - `berks upload` uploads the cookbook version to the server and freezes it
-  - `berks apply <environment>` applies the versions to the environment
+  - this file adds the URL of the local supermarket with our cookbooks
 
 ---
 
-# What Berks is Managing
+# Berkshelf Management
+
+  - `berks` reads `metadata.rb` and starts walking the dependencies
+    - first the ones declared in the file
+    - then the dependencies for each of those
+    - iterate till no more dependencies declared
 
   ![:scale 100%](img/graph.png)
 
@@ -184,6 +299,21 @@ metadata
 
 ---
 
+# Berkshelf Management
+
+## Building the Lockfile
+
+  - `Berksfile.lock` is a file containing a graph indicating cookbooks and
+    versions required
+    - The text version of the image shown in the last slide
+  - `berks install` and `berks update` create and manage the file
+
+## Artifact Management
+
+  - `berks upload` uploads the cookbook to the server and freezes it
+  - `berks apply <environment>` applies the versions to the environment
+
+---
 # Working with Chef
 
   - The exact steps depend on the need
@@ -194,13 +324,6 @@ metadata
 
         `knife bootstrap --run-list role[cit-base] ...`
 
----
-
-## New Applications
-
-  - Create a role that configures _just_ the application
-  - Rely on base roles to configure the basic stuff
-
 ## Changes to Existing Roles
 
   - Update the cookbook(s) and check in changes
@@ -209,24 +332,35 @@ metadata
   - Deploy the environment
 
 ---
-# Automation
 
-Most of what I've described needs automating to keep us from making mistakes.
+# Working with Chef
 
-## Cookbooks
+## New Applications
 
-  - Jenkins does testing and cookbook uploads
-  - Multibranch job "builds" each branch
-    - Basic validation (`foodcritic` and `rubocop`)
-    - All of the berks steps
-  - Check the "automatic-garbanzo" github project
+  - Create a role that configures _just_ the application
+  - Rely on base roles to configure the basic stuff
 
 ---
 
-## Environments
+# Automation
 
-  - Automation is still a work in progress
-  - Rakefile examines each branch and applies environment using berks
+  - Replace manual steps with one action: `git push`
+
+## Current State
+
+  - Role, Application, and Library cookbooks built with Jenkins
+    - Check the "automatic-garbanzo" github project
+    - Jenkins responds to Github webhook, does heavy lifting
+    - Multibranch job "builds" each branch, deploys artifacts for "prod"
+      branch
+
+  - Role cookbooks need an additional step, the creation of the policy object
+
+  - Environment cookbooks aren't automated yet (but close)
+    - Likely very similar to the automatic-garbanzo
+    - Instead of artifact upload, `berks apply`
+
+  - Automating Jenkins is not trivial  &#9785
 
 ---
 # Closing Notes
