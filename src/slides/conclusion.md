@@ -7,4 +7,3 @@
   - Think about collaboration with application devs
     - Think about handing off management to application devs!
 
----

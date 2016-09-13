@@ -1,4 +1,4 @@
-# The Berkshelf Way
+# Berkshelf Management
 
 `berkshelf` manages cookbook dependencies, allows liberal use of 3rd party
 cookbooks without losing one's sanity
@@ -8,7 +8,9 @@ cookbooks without losing one's sanity
 
 ---
 
-# Basic `Berksfile`:
+# Berkshelf Management
+
+## Basic `Berksfile`:
 
   - created by `chef generate cookbook`
 
@@ -20,24 +22,23 @@ metadata
   - indicates url of a server running the supermarket API
   - indicates that dependencies are located in the `metadata.rb` file
 
----
+```
+source 'https://knife.fhcrc.org'
+source 'https://supermarket.chef.io'
 
-# Berks-ing
+metadata
+```
 
-## Building the Lockfile
-
-  - `Berksfile.lock` is a file containing a graph indicating cookbooks and
-    versions required
-  - `berks install` and `berks update` create and manage the file
-
-## Updating the Chef Server
-
-  - `berks upload` uploads the cookbook version to the server and freezes it
-  - `berks apply <environment>` applies the versions to the environment
+  - this file adds the URL of the local supermarket with our cookbooks
 
 ---
 
-# What Berks is Managing
+# Berkshelf Management
+
+  - `berks` reads `metadata.rb` and starts walking the dependencies
+    - first the ones declared in the file
+    - then the dependencies for each of those
+    - iterate till no more dependencies declared
 
   ![:scale 100%](img/graph.png)
 
@@ -46,3 +47,18 @@ metadata
 
 ---
 
+# Berkshelf Management
+
+## Building the Lockfile
+
+  - `Berksfile.lock` is a file containing a graph indicating cookbooks and
+    versions required
+    - The text version of the image shown in the last slide
+  - `berks install` and `berks update` create and manage the file
+
+## Artifact Management
+
+  - `berks upload` uploads the cookbook to the server and freezes it
+  - `berks apply <environment>` applies the versions to the environment
+
+---

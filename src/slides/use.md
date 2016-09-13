@@ -8,11 +8,6 @@
 
         `knife bootstrap --run-list role[cit-base] ...`
 
-## New Applications
-
-  - Create a role that configures _just_ the application
-  - Rely on base roles to configure the basic stuff
-
 ## Changes to Existing Roles
 
   - Update the cookbook(s) and check in changes
@@ -21,3 +16,13 @@
   - Deploy the environment
 
 ---
+
+# Working with Chef
+
+## New Applications
+
+  - Create a role that configures _just_ the application
+  - Rely on base roles to configure the basic stuff
+
+---
+
